@@ -485,21 +485,26 @@ def main(args=None):  # noqa
     # that the main process is expected to handle.
     try_block_signals()
 
-    worker_pipes = []
-    worker_processes = []
-    worker_process_events = []
-    for worker_id in range(args.processes):
+    worker_pipes = [None] * args.processes
+    worker_processes = [None] * args.processes
+    worker_process_events = [None] * args.processes
+
+    def spawn_worker_thread(worker_id):
         read_pipe, write_pipe = multiprocessing.Pipe(duplex=False)
         event = multiprocessing.Event()
         proc = multiprocessing.Process(
             target=worker_process,
-            args=(args, worker_id, StreamablePipe(write_pipe), canteen, event),
+            args=(args, index, StreamablePipe(write_pipe), canteen, event),
             daemon=False,
         )
         proc.start()
-        worker_pipes.append(read_pipe)
-        worker_processes.append(proc)
-        worker_process_events.append(event)
+        worker_pipes[worker_id] = read_pipe
+        worker_processes[worker_id] = proc
+        worker_process_events[worker_id] = event
+        return proc
+
+    for index in range(args.processes):
+        proc = spawn_worker_thread(index)
 
     # Wait for all worker processes to come online before starting the
     # fork processes.  This is required to avoid race conditions like
@@ -583,9 +588,14 @@ def main(args=None):  # noqa
     waited = False
     while not waited or any(p.exitcode is None for p in worker_processes):
         waited = True
-        for proc in worker_processes:
+        for index, proc in enumerate(worker_processes[:]):
             proc.join(timeout=1)
             if proc.exitcode is None:
+                continue
+
+            if proc.exitcode == 0:
+                logger.critical("Shutting down %r and starting new thread", proc.pid)
+                spawn_worker_thread(index)
                 continue
 
             if running:  # pragma: no cover
