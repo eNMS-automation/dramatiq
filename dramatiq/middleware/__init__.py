@@ -22,6 +22,7 @@ from .current_message import CurrentMessage
 from .group_callbacks import GroupCallbacks
 from .middleware import Middleware, MiddlewareError, SkipMessage
 from .pipelines import Pipelines
+from .process_reloader import ProcessReloader
 from .prometheus import Prometheus
 from .retries import Retries
 from .shutdown import Shutdown, ShutdownNotifications
@@ -37,8 +38,8 @@ __all__ = [
 
     # Middlewares
     "AgeLimit", "AsyncIO", "Callbacks", "CurrentMessage", "GroupCallbacks",
-    "Pipelines", "Retries", "Shutdown", "ShutdownNotifications", "TimeLimit",
-    "TimeLimitExceeded", "Prometheus",
+    "Pipelines", "ProcessReloader", "Retries", "Shutdown", "ShutdownNotifications",
+    "TimeLimit", "TimeLimitExceeded", "Prometheus",
 ]
 
 
